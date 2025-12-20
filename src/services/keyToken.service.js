@@ -17,6 +17,14 @@ class KeyTokenService {
             throw error
         }
     }
+
+    static findByUserId = async (userId) {
+        return await keytokenModel.findOne({user: userId}).lean()
+    }
+
+    static async removeKeyById(id) {
+        return await keytokenModel.findByIdAndDelete(id)
+    }
 }
 
 module.exports = KeyTokenService;

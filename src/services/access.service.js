@@ -96,6 +96,62 @@ class AccessService {
         }
 
     }
+    static login = async (email, password) => {
+        try {
+            // 1. Check if shop exists
+            const shop = await shopModel.findOne({ email }).lean()
+            if (!shop) {
+                return { code: 401, message: 'Shop not registered' }
+            }
+
+            // 2. Verify password
+            const match = await bcrypt.compare(password, shop.passwordHash)
+            if (!match) {
+                return { code: 401, message: 'Invalid password' }
+            }
+
+            // 3. Generate new key pair
+            const { privateKey, publicKey } = crypto.generateKeyPairSync('rsa', {
+                modulusLength: 4096,
+                publicKeyEncoding: { type: 'pkcs1', format: 'pem' },
+                privateKeyEncoding: { type: 'pkcs1', format: 'pem' }
+            })
+
+            // 4. Save/update public key
+            const publicKeyString = await KeyTokenService.createKeyToken({
+                userId: shop._id,
+                publicKey
+            })
+
+            // 5. Create token pair
+            const tokens = await createTokenPair(
+                { userId: shop._id.toString(), email },
+                publicKeyString,
+                privateKey
+            )
+
+            return {
+                code: 200,
+                metadata: {
+                    shop: {
+                        _id: shop._id,
+                        name: shop.name,
+                        email: shop.email
+                    },
+                    tokens
+                }
+            }
+        } catch (error) {
+            console.error('[AccessService] login error', error)
+            return { code: 500, message: error.message }
+        }
+    }
+
+    // NEW: Logout
+    static logout = async (keyStore) => {
+        const deleted = await KeyTokenService.removeKeyById(keyStore._id)
+        return { code: 200, message: 'Logout successful' }
+    }
 }
 
 module.exports = AccessService;

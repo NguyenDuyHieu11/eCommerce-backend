@@ -12,14 +12,10 @@ router.use('/v1/api/keys', require('./keys'));
 // Product routes
 router.use('/v1/api/products', require('./product'));
 
-// Shop Management routes (authenticated shop operations)
+// Shop Management routes
 router.use('/v1/api/shops', require('./shop'));
 
-// Welcome route (optional)
-// router.get('/', (req, res) => {
-//     return res.status(200).json({
-//         message: 'Welcome to WSV eCommerce API',
-//     })
-// })
+// Cart routes (NEW)
+router.use('/v1/api/cart', require('./cart'));
 
 module.exports = router;

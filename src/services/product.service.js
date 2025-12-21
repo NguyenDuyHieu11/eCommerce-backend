@@ -3,7 +3,8 @@
 const { product, clothing, electronic, furniture } = require('../models/product.model');
 const AppError = require('../error/AppError');
 const BadRequestError = require('../error/BadRequestError');
-const { insertInventory } = require('../models/repositories/inventory.repo')
+const { insertInventory } = require('../models/repositories/inventory.repo');
+const { pushNotificationSystem } = require('./notification.service');
 
 // define Factory class to create product
 class ProductFactory {
@@ -51,27 +52,29 @@ class Product {
         this.product_attributes = product_attributes;
     }
 
-    async createProduct(productAttributesId) {
-        // Store the type-specific document id in the main Product doc for linkage
-        const doc = {
-            product_name: this.product_name,
-            product_thumbnail: this.product_thumbnail,
-            product_description: this.product_description,
-            product_price: this.product_price,
-            product_quantity: this.product_quantity,
-            product_type: this.product_type,
-            product_shop: this.product_shop,
-            product_attributes: productAttributesId ?? this.product_attributes,
-        }
-
-        const newProduct = await product.create(doc)
+    async createProduct(product_id) {
+        const newProduct = { ...this, _id: product_id}
         if (newProduct) {
             // add product_stock in inventory collection
-            await insertInventory({
+            const invenData = await insertInventory({
                 productId: newProduct._id,
                 shopId: this.product_shop,
                 stock: this.product_quantity
             })
+
+            // push noti to system collection
+            await pushNotificationSystem({
+                type: 'SHOP-001',
+                senderId: this.product_shop,
+                receiverId: 1,
+                options: {
+                    product_name: this.product_name,
+                    shop_name: this.product_shop
+                }
+
+            }).then(rs => console.log(rs))
+            .catch(console.error)
+            console.log(`InvenData::`, invenData)
         }
 
         return newProduct
@@ -132,4 +135,6 @@ ProductFactory.registerProductType('Electronics', Electronics);
 ProductFactory.registerProductType('Clothing', Clothing);
 ProductFactory.registerProductType('Furniture', Furniture);
 
-module.exports = ProductFactory;
+module.exports = {
+    ProductFactory,
+}

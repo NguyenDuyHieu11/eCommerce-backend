@@ -18,4 +18,6 @@ router.use('/v1/api/shops', require('./shop'));
 // Cart routes (NEW)
 router.use('/v1/api/cart', require('./cart'));
 
+// Notification routes
+router.use('/v1/api/notifications', require('./notification'));
 module.exports = router;

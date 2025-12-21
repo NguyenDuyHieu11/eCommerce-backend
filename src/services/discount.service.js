@@ -129,4 +129,40 @@ class DiscountService {
             products = await findAllProduct
         }
     }
+
+    static async getDiscountAmount({ codeId, userId, shopId, products }) {
+        const foundDiscount = await discount.findOne({
+            discount_code: codeId,
+            discount_shopId: convertToObjectIdMongodb(shopId)
+        })
+    
+        if (!foundDiscount) throw new BadRequestError('Discount not found')
+        if (!foundDiscount.discount_is_active) throw new BadRequestError('Discount expired')
+    
+        // Calculate total order value
+        const totalOrder = products.reduce((acc, p) => acc + (p.price * p.quantity), 0)
+    
+        // Check minimum order value
+        if (totalOrder < foundDiscount.discount_min_order_value) {
+            throw new BadRequestError(`Minimum order value is ${foundDiscount.discount_min_order_value}`)
+        }
+    
+        // Calculate discount
+        let discountAmount = 0
+        if (foundDiscount.discount_type === 'fixed_amount') {
+            discountAmount = foundDiscount.discount_value
+        } else if (foundDiscount.discount_type === 'percentage') {
+            discountAmount = (totalOrder * foundDiscount.discount_value) / 100
+            // Cap at max_value if set
+            if (foundDiscount.discount_max_value) {
+                discountAmount = Math.min(discountAmount, foundDiscount.discount_max_value)
+            }
+        }
+    
+        return {
+            totalOrder,
+            discount: discountAmount,
+            totalPrice: totalOrder - discountAmount
+        }
+    }
 }
